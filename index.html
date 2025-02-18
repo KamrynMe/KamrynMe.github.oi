@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Format Clock</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            height: 100%;
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            gap: 20px;
+        }
+        .clock {
+            background-color: #2a2a2a;
+            padding: 2rem 3rem;
+            border-radius: 1rem;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+            width: 100%;
+            max-width: 400px;
+        }
+        .time {
+            font-size: min(3.5rem, 13vw);
+            font-weight: bold;
+            font-family: monospace;
+            margin-bottom: 0.5rem;
+        }
+        .milliseconds {
+            color: #666;
+        }
+        .label {
+            font-size: 1.2rem;
+            color: #888;
+        }
+        @media (prefers-color-scheme: light) {
+            html, body {
+                background-color: #f0f0f0;
+                color: #000;
+            }
+            .clock {
+                background-color: #fff;
+                box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            }
+            .label {
+                color: #666;
+            }
+            .milliseconds {
+                color: #999;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="clock">
+        <div class="time" id="time100">00:00:00<span class="milliseconds">.000</span></div>
+        <div class="label">100-Hour Time</div>
+    </div>
+    <div class="clock">
+        <div class="time" id="time60">00:00:00<span class="milliseconds">.000</span></div>
+        <div class="label">60-Hour Time</div>
+    </div>
+    <div class="clock">
+        <div class="time" id="time24">00:00:00<span class="milliseconds">.000</span></div>
+        <div class="label">24-Hour Time</div>
+    </div>
+
+    <script>
+        function padNumber(num, digits = 2) {
+            return String(Math.floor(num)).padStart(digits, '0');
+        }
+
+        function update100HourClock(now) {
+            const totalHours = (now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600 + now.getMilliseconds() / 3600000) * (100/24);
+            const hours = totalHours % 100;
+            const totalMinutes = (hours % 1) * 100;
+            const minutes = totalMinutes % 100;
+            const totalSeconds = (totalMinutes % 1) * 100;
+            const seconds = totalSeconds % 100;
+            const milliseconds = Math.floor((totalSeconds % 1) * 1000);
+            
+            document.getElementById('time100').innerHTML = 
+                `${padNumber(hours)}:${padNumber(minutes)}:${padNumber(seconds)}<span class="milliseconds">.${padNumber(milliseconds, 3)}</span>`;
+        }
+
+        function update60HourClock(now) {
+            const hours24 = now.getHours() + (now.getMinutes() / 60) + (now.getSeconds() / 3600) + (now.getMilliseconds() / 3600000);
+            const hours60 = hours24 * 2.5;
+            const wholeHours = hours60 % 60;
+            const fractionalHour = hours60 - Math.floor(hours60);
+            const minutes = fractionalHour * 60;
+            const seconds = (minutes % 1) * 60;
+            const milliseconds = Math.floor((seconds % 1) * 1000);
+            
+            document.getElementById('time60').innerHTML = 
+                `${padNumber(wholeHours)}:${padNumber(minutes)}:${padNumber(seconds)}<span class="milliseconds">.${padNumber(milliseconds, 3)}</span>`;
+        }
+
+        function update24HourClock(now) {
+            document.getElementById('time24').innerHTML = 
+                `${padNumber(now.getHours())}:${padNumber(now.getMinutes())}:${padNumber(now.getSeconds())}<span class="milliseconds">.${padNumber(now.getMilliseconds(), 3)}</span>`;
+        }
+
+        function updateAllClocks() {
+            const now = new Date();
+            update100HourClock(now);
+            update60HourClock(now);
+            update24HourClock(now);
+            // Request next frame for smooth animation
+            requestAnimationFrame(updateAllClocks);
+        }
+
+        // Start the animation
+        requestAnimationFrame(updateAllClocks);
+
+        // Prevent screen from sleeping
+        if (navigator.wakeLock) {
+            let wakeLock = null;
+            const requestWakeLock = async () => {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    // Silently fail if wake lock is not available
+                }
+            };
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    requestWakeLock();
+                }
+            });
+            requestWakeLock();
+        }
+    </script>
+</body>
+</html>
